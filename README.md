@@ -8,7 +8,8 @@
 ├── requirements.txt
 └── models/
 
-requirements.txt
+touch requirements.txt
+
 requests
 beautifulsoup4
 pandas
