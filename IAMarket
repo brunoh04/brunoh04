@@ -157,4 +157,15 @@ input, button {
 
 # IAMARKET
 
+## Descrição
+Uma plataforma web para realizar pesquisas de mercado na internet e gerar relatórios para startups.
+
+## Configuração
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/brunoh04/IAMARKET.git
+   cd IAMARKET
+
+
 
