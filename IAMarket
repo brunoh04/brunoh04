@@ -1,0 +1,160 @@
+IAMARKET/
+│
+├── requirements.txt
+├── README.md
+├── app.py
+├── scraping.py
+├── analysis.py
+├── storage.py
+├── templates/
+│   ├── index.html
+│   ├── result.html
+│
+└── static/
+    └── style.css
+requirements.txt
+Flask
+requests
+beautifulsoup4
+pandas
+scikit-learn
+joblib
+
+app.py
+from flask import Flask, request, render_template
+from scraping import get_market_data
+from analysis import analyze_market_data
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/search', methods=['POST'])
+def search():
+    query = request.form['query']
+    df = get_market_data(query)
+    score, report = analyze_market_data(df)
+    return render_template('result.html', score=score, report=report, data=df.to_html())
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+scraping.py
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+def get_market_data(query):
+    url = f"https://www.example.com/search?q={query}"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    data = []
+    for item in soup.find_all('div', class_='market-item'):
+        title = item.find('h2').text
+        price = item.find('span', class_='price').text
+        description = item.find('p', class_='description').text.strip() if item.find('p', class_='description') else ''
+        data.append({'title': title, 'price': price, 'description': description})
+
+    df = pd.DataFrame(data)
+    return df
+
+analysis.py
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+import joblib
+
+def analyze_market_data(df):
+    df['price'] = df['price'].replace('[\$,]', '', regex=True).astype(float)
+    df['title_length'] = df['title'].apply(len)
+    df['description_length'] = df['description'].apply(len)
+
+    X = df[['title_length', 'description_length']]
+    y = df['price']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    model = RandomForestRegressor()
+    model.fit(X_train, y_train)
+
+    score = model.score(X_test, y_test)
+    report = f"R^2 Score: {score:.2f}"
+
+    joblib.dump(model, 'model/market_model.pkl')
+
+    return score, report
+
+storage.py
+import ipfshttpclient
+
+def upload_to_ipfs(filepath):
+    client = ipfshttpclient.connect('/dns/localhost/tcp/5001/http')
+    res = client.add(filepath)
+    return res['Hash']
+
+def download_from_ipfs(hash):
+    client = ipfshttpclient.connect('/dns/localhost/tcp/5001/http')
+    client.get(hash)
+
+templates/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Market Research</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Market Research Tool</h1>
+    <form action="/search" method="post">
+        <input type="text" name="query" placeholder="Enter market query">
+        <button type="submit">Search</button>
+    </form>
+</body>
+</html>
+
+templates/result.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Market Research Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Market Research Results</h1>
+    <p>{{ report }}</p>
+    <div>
+        {{ data | safe }}
+    </div>
+    <a href="/">Go Back</a>
+</body>
+</html>
+
+static/style.css
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+input, button {
+    padding: 10px;
+    margin-right: 10px;
+}
+
+# IAMARKET
+
+
